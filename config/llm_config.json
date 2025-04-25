@@ -1,0 +1,7 @@
+{   
+    "model_type": "gemma",
+    "model_path": "/workspace/model/", 
+    "data_path": "/workspace/data/",
+    "embedding_model": "kakaobank/kf-deberta-base",
+    "language_model": "google/gemma-3-4b-it"
+}
