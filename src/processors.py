@@ -1,3 +1,4 @@
+import tempfile
 import fitz  # PyMuPDF
 import re 
 
@@ -7,7 +8,7 @@ class FrontProcessor:
     0. Header, Footer 제거 
     1. 조 항 호 형태로 텍스트 변환 
     '''
-    def crop_pdf(self, file_name, output_path, top_crop_ratio=0.1, bottom_crop_ratio=0.08):
+    def crop_pdf(self, file_name, output_path=None, top_crop_ratio=0.1, bottom_crop_ratio=0.08):
         doc = fitz.open(file_name)
         for page in doc:
             rect = page.rect
@@ -20,13 +21,42 @@ class FrontProcessor:
                 rect.y1 - bottom_crop
             )
             page.set_cropbox(new_rect)
-        doc.save(output_path)
+        if output_path != None:
+            doc.save(output_path)
+            return 
+        else: 
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+            doc.save(tmp_file.name)
+            tmp_file.close()
+            return tmp_file.name
 
-    def replace_newline(self, ocr_result):
-        replaced_result = [] 
-        for page in ocr_result[0]:
-            replaced_result.append(page.replace('\n', ''))
-        return replaced_result 
+    def replace_soft_newline(self, ocr_result):
+        """
+        OCR 결과에서 줄 중간의 불필요한 줄바꿈만 제거하고,
+        '조', '항', '호' 등의 구조 구분을 위한 줄바꿈은 유지함.
+        """
+        replaced_result = []
+        for page in ocr_result:
+            text = page
+
+            # 1. '법 제193조 \n제2항' 처럼 끊긴 조-항 연결
+            text = re.sub(r'(법\s+제\d+조)\s*\n\s*(제\d+항)', r'\1 \2', text)
+
+            # 2. 한글 단어 중간에서 줄 끊긴 경우 연결 (ex: '합\n병')
+            text = re.sub(r'(?<=[가-힣])\n(?=[가-힣])', '', text)
+
+            # 3. 나머지 줄바꿈 정리:
+            #    줄단위로 쪼갠 뒤 '제XX조'로 시작하는 줄은 유지, 그 외는 이어붙임
+            lines = text.split('\n')
+            merged = []
+            for line in lines:
+                stripped = line.strip()
+                if re.match(r'^제\s*\d+\s*조', stripped):
+                    merged.append('\n' + stripped)
+                else:
+                    merged.append(' ' + stripped)
+            replaced_result.append(''.join(merged).strip())
+        return replaced_result
 
     def convert_text(self, ocr_result):
         '''
@@ -40,10 +70,8 @@ class FrontProcessor:
         }
         converted_text = [] 
         for result in ocr_result: 
-            # (1) ①~⑳ 변환 먼저
             for circled, replacement in circled_number_map.items():
                 result = result.replace(circled, replacement)
-            # (2) 줄 시작에 숫자. 형태를 숫자호로 변환
             result = re.sub(r'(?<!\d)(\d+)\.\s*', r'\1호 ', result)
             converted_text.append(result)
         return converted_text
