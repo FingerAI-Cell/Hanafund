@@ -22,12 +22,27 @@ class UPOCR(OCRTask):
         files = {"document": open(pdf_file, "rb")}
         data = {"model": "ocr"}
         response = requests.post(self.url, headers=self.headers, files=files, data=data)
-
         page_info = response.json()['pages']
         text_list = [box['text'] + '\n\n' for box in page_info]
         contents.append(text_list)
-        return contents 
+        return contents
     
     def save_result(self, ocr_result, save_path, file_name):
-        with open(os.path.join(save_path, file_name), "w", encoding="utf-8") as output_file:
-            json.dump(ocr_result, output_file, ensure_ascii=False, indent=4)
+        if isinstance(ocr_result, str):
+            with open(os.path.join(save_path, file_name), "w", encoding="utf-8") as f:
+                f.write(ocr_result)
+        elif isinstance(ocr_result, list):
+            with open(os.path.join(save_path, file_name), "w", encoding="utf-8") as output_file:
+                json.dump(ocr_result, output_file, ensure_ascii=False, indent=4)
+
+    def load_result(self, save_path, file_name):
+        full_path = os.path.join(save_path, file_name)
+        _, ext = os.path.splitext(file_name)
+        if ext == ".json":
+            with open(full_path, "r", encoding="utf-8") as f:
+                return json.load(f)  # list 또는 dict 리턴
+        elif ext in [".txt", ".md", ".log"]:
+            with open(full_path, "r", encoding="utf-8") as f:
+                return f.read()  # str 리턴
+        else:
+            raise ValueError(f"Unsupported file extension for loading: {ext}")
