@@ -60,9 +60,9 @@ class ExtractPipe:
                 requirement['입력 Data'] = None
                 print(f'key: {key}, req: {requirement}')
                 print(f'jo: {jo}, ref: {ref}')
-                print(extracted_text, end='\n\n')
+                print(extracted_text)
 
                 user_requirement = {key: requirement}
                 llm_prompt = self.openai_llm.set_prompt_template(ocr_result, user_requirement)
                 llm_response = self.openai_llm.get_response(llm_prompt, role=self.openai_llm.system_role, sub_role=self.openai_llm.sub_role)
-                # print(f'model response: {llm_response}, answer: {answer}')'''
+                print(f'model response: {llm_response}, answer: {answer}', end='\n\n')

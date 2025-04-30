@@ -23,7 +23,7 @@ class UPOCR(OCRTask):
         data = {"model": "ocr"}
         response = requests.post(self.url, headers=self.headers, files=files, data=data)
         page_info = response.json()['pages']
-        text_list = [box['text'] + '\n\n' for box in page_info]
+        text_list = [box['text'] + ' \n\n' for box in page_info]
         contents.append(text_list)
         return contents
     

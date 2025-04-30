@@ -33,25 +33,25 @@ class FrontProcessor:
     def replace_soft_newline(self, ocr_result):
         """
         OCR 결과에서 줄 중간의 불필요한 줄바꿈만 제거하고,
-        '조', '항', '호' 등의 구조 구분을 위한 줄바꿈은 유지함.
+        '제XX조(...)' 구조 구분을 위한 줄바꿈은 유지함.
         """
         replaced_result = []
         for page in ocr_result:
             text = page
 
-            # 1. '법 제193조 \n제2항' 처럼 끊긴 조-항 연결
+            # 1. '법 제193조 \n제2항' 끊김 보정
             text = re.sub(r'(법\s+제\d+조)\s*\n\s*(제\d+항)', r'\1 \2', text)
 
-            # 2. 한글 단어 중간에서 줄 끊긴 경우 연결 (ex: '합\n병')
+            # 2. 한글 단어 중간 줄바꿈 제거
             text = re.sub(r'(?<=[가-힣])\n(?=[가-힣])', '', text)
 
-            # 3. 나머지 줄바꿈 정리:
-            #    줄단위로 쪼갠 뒤 '제XX조'로 시작하는 줄은 유지, 그 외는 이어붙임
+            # 3. 조문 인식 → 줄 어디서든 '제XX조(' 패턴 등장 시 줄바꿈 삽입
             lines = text.split('\n')
             merged = []
             for line in lines:
                 stripped = line.strip()
-                if re.match(r'^제\s*\d+\s*조', stripped):
+
+                if re.search(r'제\s*\d+\s*조\s*\(', stripped):
                     merged.append('\n' + stripped)
                 else:
                     merged.append(' ' + stripped)
