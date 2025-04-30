@@ -40,6 +40,16 @@ class MyFileHandler(FileHandler):
         self.reference['펀드영업일기준'] = ['거래소 영업일', '판매사 영업일'] 
         self.reference['공모사모구분'] = ['공모/단독', '공모/일반', '사모/단독', '사모/일반']
         self.reference['분배방식구분'] = ['전액분배', '평가이익유보', '매매평가이익유보']
+
+    def extract_jo_number(self, text):
+        '''
+        간혹 제 25조 1항 -> 제 25호 1항 같이 들어오는 경우 존재. 
+        '''
+        if text == None: 
+            return None
+        text = re.sub(r'제\s*(\d+)\s*호(?=\s*\d+\s*항)', r'제 \1조', text)
+        match = re.search(r'제\s*(\d+)\s*조', text)
+        return int(match.group(1)) if match else None
     
     def extract_row_info(self, data, idx):
         '''
@@ -72,7 +82,7 @@ class MyFileHandler(FileHandler):
         result['Filename'] = file_name
         return result     
 
-    def find_referenced_clauses(text):
+    def find_referenced_clauses(self, text):
         """
         텍스트에서 '제XX조제YY항을 준용한다 / 따른다 / 참조한다' 등의 참조 조항을 찾아냄.
         """
@@ -86,77 +96,13 @@ class MyFileHandler(FileHandler):
             referenced.add((jo, hang))  # (조, 항)
         return referenced
 
-    def parse_jo_hang_ho(self, line):
-        if line == None: 
-            return None 
-        line = line.strip()
-        jo_match = re.search(r'제\s*(\d+)\s*조', line)
-        jo = int(jo_match.group(1)) if jo_match else None
-
-        hang_matches = re.findall(r'(\d+)\s*항', line)
-        hangs = [int(h) for h in hang_matches] if hang_matches else []
-
-        ho_matches = re.findall(r'(\d+)\s*호', line)
-        hos = [int(h) for h in ho_matches] if ho_matches else []
-        result = defaultdict(dict)
-        if not hangs:
-            result[jo] = None
-        else:
-            for hang in hangs:
-                result[jo][hang] = hos if hos else None
-        return dict(result)
-
     def extract_jo(self, text, jo):
-        pattern = rf'(제\s*{jo}\s*조.*?)(?=제\s*{jo+1}\s*조|제\s*\d+\s*장)'
+        """
+        '제XX조(조문제목)' 형태로 시작하는 조문 내용만 추출 (정확한 조문 시작만)
+        """
+        if jo is None:
+            return text
+
+        pattern = rf'(?:^|\n)제\s*{jo}\s*조\s*\(.*?\).*?(?=\n제\s*\d+\s*조\s*\(|\n제\s*\d+\s*장|$)'
         match = re.search(pattern, text, re.DOTALL)
-        return match.group(1).strip() if match else None
-
-    def extract_jo_hang(self, text, jo, hang):
-        jo_block = self.extract_jo(text, jo)
-        if not jo_block:
-            return None
-        pattern = rf'{hang}\s*항(.*?)(?=\d+\s*항|제\s*\d+\s*조|제\s*\d+\s*장)'
-        match = re.search(pattern, jo_block, re.DOTALL)
-        return match.group(1).strip() if match else None
-
-    def extract_jo_hang_ho(self, text, jo=1, hang=1, ho=1):
-        jo_pattern = rf'(제\s*{jo}\s*조.*?)(?=제\s*{jo+1}\s*조|제\s*\d+\s*장)'
-        jo_match = re.search(jo_pattern, text, re.DOTALL)
-        if not jo_match:
-            return None
-        jo_block = jo_match.group(1)
-
-        hang_pattern = rf'{hang}항(.*?)(?=\d+항|제\s*\d+\s*조|제\s*\d+\s*장)'
-        hang_match = re.search(hang_pattern, jo_block, re.DOTALL)
-        if not hang_match:
-            return None
-        hang_block = hang_match.group(1)
-
-        ho_pattern = rf'{ho}호(.*?)(?=\d+호|제\s*\d+\s*조|제\s*\d+\s*장)'
-        ho_match = re.search(ho_pattern, hang_block, re.DOTALL)
-        if not ho_match:
-            return None
-        return ho_match.group(0).strip()
-
-    def extract_multiple(self, text, target_dict):
-        extracted = []
-        if target_dict == None:
-            print(f'참고 Data가 없어, 전체 text를 반환합니다.')
-            return text 
-        for jo, hang_map in target_dict.items():
-            if hang_map is None:
-                content = self.extract_jo(text, jo)
-                if content:
-                    extracted.append((jo, None, None, content))
-            else:
-                for hang, hos in hang_map.items():
-                    if hos is None:
-                        content = self.extract_jo_hang(text, jo, hang)
-                        if content:
-                            extracted.append((jo, hang, None, content))
-                    else:
-                        for ho in hos:
-                            content = self.extract_jo_hang_ho(text, jo, hang, ho)
-                            if content:
-                                extracted.append((jo, hang, ho, content))
-        return extracted
+        return match.group(0).strip() if match else None
