@@ -7,3 +7,4 @@ src/__pycache__
 *.xlsx
 *.pdf
 *.json
+*.txt
