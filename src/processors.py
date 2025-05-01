@@ -38,19 +38,18 @@ class FrontProcessor:
         replaced_result = []
         for page in ocr_result:
             text = page
-
+            # print(f'page: {page}')
             # 1. '법 제193조 \n제2항' 끊김 보정
-            text = re.sub(r'(법\s+제\d+조)\s*\n\s*(제\d+항)', r'\1 \2', text)
+            text = re.sub(r'(법\s*제\s*\d+\s*조)\s*\n\s*(제\s*\d+항)', r'\1 \2', text)
 
             # 2. 한글 단어 중간 줄바꿈 제거
             text = re.sub(r'(?<=[가-힣])\n(?=[가-힣])', '', text)
 
-            # 3. 조문 인식 → 줄 어디서든 '제XX조(' 패턴 등장 시 줄바꿈 삽입
             lines = text.split('\n')
             merged = []
             for line in lines:
+                # print(f'line: {line}')
                 stripped = line.strip()
-
                 if re.search(r'제\s*\d+\s*조\s*\(', stripped):
                     merged.append('\n' + stripped)
                 else:

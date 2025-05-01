@@ -22,9 +22,10 @@ class OCRPipe:
         return self.upocr.get_ocr_result(cropped_pdf)
 
     def process_ocr(self, ocr_result, save_path=None, file_name=None):
+        # print(f'ocr result: {ocr_result[0]}')
         replaced_text = self.front_processor.replace_soft_newline(ocr_result[0])
         converted_text = self.front_processor.convert_text(replaced_text)
-        full_text = ''.join(converted_text)
+        full_text = '\n\n'.join(converted_text)
         if save_path != None: 
             self.upocr.save_result(full_text, save_path, file_name)
         return full_text
