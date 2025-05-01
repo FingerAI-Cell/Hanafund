@@ -11,6 +11,7 @@ import os
 def main(args):
     load_dotenv()
     upstage_api_key = os.getenv('UPSTAGE_API_KEY')
+    openai_api_key = os.getenv('OPENAI_API_KEY')
     llm_openai = LLMOpenAI()
     llm_openai.set_response_guideline()
 
