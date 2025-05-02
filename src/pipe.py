@@ -46,6 +46,7 @@ class ExtractPipe:
         self.post_processor = PostProcessor()
         self.openai_llm = LLMOpenAI()
         self.openai_llm.set_response_guideline()
+        self.post_processor.set_reference()
     
     def get_model_response(self, ocr_result, user_requirements):
         '''
@@ -61,9 +62,10 @@ class ExtractPipe:
                 requirement['입력 Data'] = None
                 print(f'key: {key}, req: {requirement}')
                 print(f'jo: {jo}, ref: {ref}')
-                print(extracted_text)
+                # print(extracted_text)
 
                 user_requirement = {key: requirement}
-                llm_prompt = self.openai_llm.set_prompt_template(ocr_result, user_requirement)
+                llm_prompt = self.openai_llm.set_prompt_template(extracted_text, user_requirement)
+                print(f'prompt: {llm_prompt}')
                 llm_response = self.openai_llm.get_response(llm_prompt, role=self.openai_llm.system_role, sub_role=self.openai_llm.sub_role)
                 print(f'model response: {llm_response}, answer: {answer}', end='\n\n')
