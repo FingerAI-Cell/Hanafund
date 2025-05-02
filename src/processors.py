@@ -71,7 +71,7 @@ class FrontProcessor:
         for result in ocr_result: 
             for circled, replacement in circled_number_map.items():
                 result = result.replace(circled, replacement)
-            result = re.sub(r'(?<!\d)(\d+)\.\s*', r'\1호 ', result)
+            result = re.sub(r'(?<!\d)(\d+)\.\s+(?=\S)', r'\1호 ', result)
             converted_text.append(result)
         return converted_text
 
@@ -100,6 +100,55 @@ class PostProcessor:
         ]
 
     def apply_reference(self, model_response, ocr_result, user_requirement):
+        '''
+        사용자 요구사항 리스트 
+        [컴플] 
+        1. 펀드그룹분류코드
+        2. 주식편입최고비율
+        3. 주식편입최저비율
+        4. 채권편입최고비율
+        5. 채권편입최저비율
+        6. 한도산식
+        7. 신용등급
+        8. 단위구분 
+        9. 최저비율
+        10. 최고비율
+
+        [컴플]
+        1. 운용사코드
+        2. 수탁사
+        3. 위탁사펀드명
+        4. 펀드종류구분
+        5. 펀드영업일기준
+        6. 단위형여부
+        7. 공모사모구분 
+        8. 펀드구조
+        9. 최초설정일
+        10. 상환예정일(약관)
+        11. 한도액 
+        12. 설정대금확정일(기준시간 이전)
+        13. 설정(결제)일(기준시간 이전)
+        14. 설정대금확정일(기준시간 이후)
+        15. 설정대금결제일(기준시간 이후)
+        16. 설정기준시간(시/분)
+        17. 환매대금확정일(기준시간 이전)
+        18. 환매대금결제일(기준시간 이전)
+        19. 환매대금확정일(기준시간 이후)
+        20. 환매대금결제일(기준시간 이후)
+        21. 환매기준시간(시/분)
+        22. 거래단위(좌수)
+        23. 좌당단가
+        24. 최초기준가 
+        25. 신탁계산기간
+        26. 분배방식구분
+        27. 보수계산기간(월)
+        28. 보수코드 
+        29. 보수율_집합투자업자(bp)
+        30. 보수율_판매회사(bp)
+        31. 보수율_투자일임(bp)
+        32. 보수율_신탁업자(bp)
+        33. 보수율_일반사무관리회사(bp)
+        '''
         if user_requirement['key'] == '한도산식':
             pass
         elif user_requirement['key'] == '신용등급':
