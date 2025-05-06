@@ -1,3 +1,4 @@
+from .docs import MyFileHandler
 import tempfile
 import fitz  # PyMuPDF
 import re 
@@ -38,11 +39,7 @@ class FrontProcessor:
         replaced_result = []
         for page in ocr_result:
             text = page
-            # print(f'page: {page}')
-            # 1. '법 제193조 \n제2항' 끊김 보정
             text = re.sub(r'(법\s*제\s*\d+\s*조)\s*\n\s*(제\s*\d+항)', r'\1 \2', text)
-
-            # 2. 한글 단어 중간 줄바꿈 제거
             text = re.sub(r'(?<=[가-힣])\n(?=[가-힣])', '', text)
 
             lines = text.split('\n')
@@ -74,6 +71,7 @@ class FrontProcessor:
             result = re.sub(r'(?<!\d)(\d+)\.\s+(?=\S)', r'\1호 ', result)
             converted_text.append(result)
         return converted_text
+    
 
 class PostProcessor:
     '''
@@ -82,15 +80,24 @@ class PostProcessor:
     3. 
     '''
     def __init__(self):
-        self.set_reference()
+        self.set_code()
+        self.set_env()
+        
+    def set_env(self):
+        self.myfile_handler = MyFileHandler()
 
-    def set_reference(self):
+    def set_code(self):
         '''
         business_day_targets 요구사항이 나오면 반환 포맷은 제O엽업일
         '''
-        self.reference = dict()
-        self.reference['한도산식'] = {'미만': '<', '이하': '≤', '초과': '>', '이상': '≥', '사이': 'between'}
-        self.reference['단위구분'] = ['%', '원', '억', '백만', '만', '주', '계약', '만주', '개', '업종', '종목', '년', '월', '일', '분기', '신용등급']
+        self.reference_code = dict()
+        self.reference_code['펀드그룹분류코드'] = ['투자신탁', '투자일임', '투자회사']
+        self.reference_code['한도산식'] = {'미만': '<', '이하': '≤', '초과': '>', '이상': '≥', '사이': 'between'}
+        self.reference_code['단위구분'] = ['%', '원', '억', '백만', '만', '주', '계약', '만주', '개', '업종', '종목', '년', '월', '일', '분기', '신용등급']
+        self.reference_code['펀드구조'] = ['일반펀드', '모펀드', '자펀드', '클래스운용', '클래스', '클래스운용(자)']
+        self.reference_code['펀드영업일기준'] = ['거래소 영업일', '판매사 영업일'] 
+        self.reference_code['공모사모구분'] = ['공모/단독', '공모/일반', '사모/단독', '사모/일반']
+        self.reference_code['분배방식구분'] = ['전액분배', '평가이익유보', '매매평가이익유보']
         self.business_day_targets = [
             '설정대금확정일',
             '설정(결제)일',
@@ -98,62 +105,58 @@ class PostProcessor:
             '환매대금확정일',
             '환매대금결제일'
         ]
+    
+    def extract_reference(self, ocr_result, reference):
+        hang, ho = self.myfile_handler.extract_hang_ho_number(reference)
+        print(f'hang: {hang}, ho: {ho}')
+        if hang is not None and ho is not None:    # 항, 호 모두 존재하는 경우  
+            hang_text = self.myfile_handler.extract_hang(ocr_result, hang) 
+            text = self.myfile_handler.extract_ho(hang_text, ho)
+        elif hang is not None and ho is None: 
+            text = self.myfile_handler.extract_hang(ocr_result, hang) 
+        elif hang is None and ho is not None: 
+            text = self.myfile_handler.extract_ho(ocr_result, ho)
+        else: 
+            text = ocr_result 
+        return text 
 
-    def apply_reference(self, model_response, ocr_result, user_requirement):
+    def adjust_limit_by_ref(self, model_response, ocr_result, reference, remark):
         '''
-        사용자 요구사항 리스트 
-        [컴플] 
-        1. 펀드그룹분류코드
-        2. 주식편입최고비율
-        3. 주식편입최저비율
-        4. 채권편입최고비율
-        5. 채권편입최저비율
-        6. 한도산식
-        7. 신용등급
-        8. 단위구분 
-        9. 최저비율
-        10. 최고비율
+        최저, 최고인 경우 후처리 진행하는 함수
+        reference 참고해서 해당 text 추출 
+        이후 비고와 비교 
+        '''
+        text = self.extract_reference(ocr_result, reference)
 
-        [컴플]
-        1. 운용사코드
-        2. 수탁사
-        3. 위탁사펀드명
-        4. 펀드종류구분
-        5. 펀드영업일기준
-        6. 단위형여부
-        7. 공모사모구분 
-        8. 펀드구조
-        9. 최초설정일
-        10. 상환예정일(약관)
-        11. 한도액 
-        12. 설정대금확정일(기준시간 이전)
-        13. 설정(결제)일(기준시간 이전)
-        14. 설정대금확정일(기준시간 이후)
-        15. 설정대금결제일(기준시간 이후)
-        16. 설정기준시간(시/분)
-        17. 환매대금확정일(기준시간 이전)
-        18. 환매대금결제일(기준시간 이전)
-        19. 환매대금확정일(기준시간 이후)
-        20. 환매대금결제일(기준시간 이후)
-        21. 환매기준시간(시/분)
-        22. 거래단위(좌수)
-        23. 좌당단가
-        24. 최초기준가 
-        25. 신탁계산기간
-        26. 분배방식구분
-        27. 보수계산기간(월)
-        28. 보수코드 
-        29. 보수율_집합투자업자(bp)
-        30. 보수율_판매회사(bp)
-        31. 보수율_투자일임(bp)
-        32. 보수율_신탁업자(bp)
-        33. 보수율_일반사무관리회사(bp)
+        print(f'hang ho: {text}')
+        if remark is None:
+            return model_response
+        if '이상인 경우' in remark:
+            if '%앞 숫자' in remark:
+                match = re.search(r'(\d+)%', str(model_response))
+                return match.group(1) if match else model_response
+        elif '이하인 경우' in remark:
+            if '%앞 숫자' in remark:
+                match = re.search(r'(\d+)%', str(model_response))
+                return match.group(1) if match else model_response
+
+
+    def apply_remark(self, model_response, ocr_result, user_requirement):
         '''
-        if user_requirement['key'] == '한도산식':
+        user_requirement: {
+            'requirement: "", 
+            "reference": "", 
+            "remark": ""
+        }
+        컴플: 펀드그룹분류코드, 최고-최저비율, 한도산식, 신용등급
+        '''
+        if '최저비율' in user_requirement['requirement'] or '최고비율' in user_requirement['requirement']:
+            return self.adjust_limit_by_ref(model_response, ocr_result, user_requirement['reference'], user_requirement['remark'])
+        elif user_requirement.keys() == '한도산식':
             pass
-        elif user_requirement['key'] == '신용등급':
-            pass
-        elif user_requirement['key'] in self.buisness_day_targets:
+        elif user_requirement.keys() == '신용등급':
+            pass 
+        elif user_requirement.keys() in self.business_day_targets:
             pass 
 
     def apply_remarks(self, text, remark):
