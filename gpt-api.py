@@ -16,9 +16,9 @@ def main(args):
     llm_openai.set_response_guideline()
 
     ocr_pipe = OCRPipe(upstage_api_key)
-    ocr_result = ocr_pipe.get_ocr(args.pdf_file)
-    processed_ocr = ocr_pipe.process_ocr(ocr_result, './dataset/output/', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
-    # processed_ocr = ocr_pipe.load_ocr('./dataset/output', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
+    # ocr_result = ocr_pipe.get_ocr(args.pdf_file)
+    # processed_ocr = ocr_pipe.process_ocr(ocr_result, './dataset/output/', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
+    processed_ocr = ocr_pipe.load_ocr('./dataset/output', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
     # print(processed_ocr)
     
     myfile_handler = MyFileHandler()
