@@ -31,15 +31,6 @@ class FileHandler:
 class MyFileHandler(FileHandler):
     def __init__(self):
         super().__init__()
-        self.set_reference()
-
-    def set_reference(self):
-        self.reference = dict()
-        self.reference['펀드종류구분'] = ['투자신탁', '투자일임', '투자회사'] 
-        self.reference['펀드구조'] = ['일반펀드', '모펀드', '자펀드', '클래스운용', '클래스', '클래스운용(자)']
-        self.reference['펀드영업일기준'] = ['거래소 영업일', '판매사 영업일'] 
-        self.reference['공모사모구분'] = ['공모/단독', '공모/일반', '사모/단독', '사모/일반']
-        self.reference['분배방식구분'] = ['전액분배', '평가이익유보', '매매평가이익유보']
 
     def extract_jo_number(self, text):
         '''
@@ -50,6 +41,67 @@ class MyFileHandler(FileHandler):
         text = re.sub(r'제\s*(\d+)\s*호(?=\s*\d+\s*항)', r'제 \1조', text)
         match = re.search(r'제\s*(\d+)\s*조', text)
         return int(match.group(1)) if match else None
+    
+    def extract_hang_ho_number(self, text):
+        """
+        '제16조 1항 2호' → jo=16, hang=1, ho=2 로 분해
+        """
+        hang_match = re.search(r'(\d+)항', text)
+        ho_match = re.search(r'(\d+)호', text)
+
+        hang = hang_match.group(1) if hang_match else None
+        ho = ho_match.group(1) if ho_match else None
+        return hang, ho
+
+    def extract_jo(self, text, jo_number):
+        """
+        '제XX조(조문제목)' 형태로 시작하는 조문 내용만 추출 (정확한 조문 시작만)
+        """
+        if jo_number is None:
+            return text
+
+        pattern = rf'(?:^|\n)제\s*{jo_number}\s*조\s*\(.*?\).*?(?=\n제\s*\d+\s*조\s*\(|\n제\s*\d+\s*장|$)'
+        match = re.search(pattern, text, re.DOTALL)
+        return match.group(0).strip() if match else None
+    
+    def extract_hang(self, ocr_text, hang_number):
+        if hang_number is None:
+            return ocr_text 
+        
+        text_list = [text.strip() for text in ocr_text.split('.')]
+        result = []
+        capture = False
+        pattern_start = re.compile(rf'^{hang_number}항')
+        for text in text_list:
+            if pattern_start.match(text):  # 해당 항 시작
+                result.append(text)
+                capture = True
+            elif re.match(r'^\d+항', text):  # 다음 항 시작 → 종료
+                if capture:
+                    break
+            elif capture:  # 항 내부 계속 수집
+                result.append(text)
+        return '. '.join(result) if result else None
+    
+    def extract_ho(self, ocr_text, ho_number):
+        if ho_number is None: 
+            return ocr_text 
+        
+        text_list = [text.strip() for text in ocr_text.split('.')] 
+        result = []
+        capture = False
+        pattern_start = re.compile(rf'^{ho_number}호')
+
+        for text in text_list:
+            if pattern_start.match(text):
+                result.append(text)
+                capture = True
+            elif re.match(r'^\d+호', text):  # 다음 호가 시작되면 중단
+                if capture:
+                    break
+            elif capture:   # 1호 관련 설명이 여러 줄일 경우 계속 붙임
+                result.append(text)
+        return ''.join(result)
     
     def extract_row_info(self, data, idx):
         '''
@@ -81,28 +133,3 @@ class MyFileHandler(FileHandler):
                 result['Category'][category][mid] = value_dict
         result['Filename'] = file_name
         return result     
-
-    def find_referenced_clauses(self, text):
-        """
-        텍스트에서 '제XX조제YY항을 준용한다 / 따른다 / 참조한다' 등의 참조 조항을 찾아냄.
-        """
-        pattern = r"제\s*(\d+)\s*조(?:\s*제\s*(\d+)\s*항)?을\s*(준용|따른|참조)한다"
-        matches = re.findall(pattern, text)
-
-        referenced = set()
-        for jo_str, hang_str, _ in matches:
-            jo = int(jo_str)
-            hang = int(hang_str) if hang_str else None
-            referenced.add((jo, hang))  # (조, 항)
-        return referenced
-
-    def extract_jo(self, text, jo):
-        """
-        '제XX조(조문제목)' 형태로 시작하는 조문 내용만 추출 (정확한 조문 시작만)
-        """
-        if jo is None:
-            return text
-
-        pattern = rf'(?:^|\n)제\s*{jo}\s*조\s*\(.*?\).*?(?=\n제\s*\d+\s*조\s*\(|\n제\s*\d+\s*장|$)'
-        match = re.search(pattern, text, re.DOTALL)
-        return match.group(0).strip() if match else None
