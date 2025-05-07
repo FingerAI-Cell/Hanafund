@@ -67,7 +67,8 @@ class MyFileHandler(FileHandler):
     def extract_hang(self, text, hang_number):
         """
         텍스트에서 특정 항(hang_number)에 해당하는 범위만 추출
-        예: 1항 → '1항 ... (2항 전까지)'
+        예: 1항 → '1항 ... (2항 전까지)' 
+        항은 앞에 '제'가 붙어있는 경우 다른 항 및 호에서 인용하는 문구일 확률이 높음
         """
         try:
             hang_number = int(hang_number)
@@ -130,4 +131,4 @@ class MyFileHandler(FileHandler):
                     value_dict[sub] = value if pd.notna(value) else None
                 result['Category'][category][mid] = value_dict
         result['Filename'] = file_name
-        return result     
+        return result
