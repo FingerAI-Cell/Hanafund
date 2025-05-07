@@ -45,7 +45,6 @@ class FrontProcessor:
             lines = text.split('\n')
             merged = []
             for line in lines:
-                # print(f'line: {line}')
                 stripped = line.strip()
                 if re.search(r'제\s*\d+\s*조\s*\(', stripped):
                     merged.append('\n' + stripped)
@@ -108,10 +107,15 @@ class PostProcessor:
     
     def extract_reference(self, ocr_result, reference):
         hang, ho = self.myfile_handler.extract_hang_ho_number(reference)
-        print(f'hang: {hang}, ho: {ho}')
-        if hang is not None and ho is not None:    # 항, 호 모두 존재하는 경우  
-            hang_text = self.myfile_handler.extract_hang(ocr_result, hang) 
-            text = self.myfile_handler.extract_ho(hang_text, ho)
+        print(f'hang: {hang}, ho: {ho}, text: {ocr_result}')
+        if hang is not None and ho is not None:    # 항, 호 모두 존재하는 경우 '항 추출 -> 해당 항에서 호 추출' 
+            hang_text, flag = self.myfile_handler.extract_hang(ocr_result, hang) 
+            print(f'hang text: {hang_text}')
+            if flag == False: 
+                text = ocr_result 
+            else: 
+                text = self.myfile_handler.extract_ho(hang_text, ho)
+            print(f'ho text: {text}')
         elif hang is not None and ho is None: 
             text = self.myfile_handler.extract_hang(ocr_result, hang) 
         elif hang is None and ho is not None: 
@@ -120,26 +124,32 @@ class PostProcessor:
             text = ocr_result 
         return text 
 
-    def adjust_limit_by_ref(self, model_response, ocr_result, reference, remark):
+    def adjust_limit_by_remark(self, model_response, text, remark):
         '''
         최저, 최고인 경우 후처리 진행하는 함수
         reference 참고해서 해당 text 추출 
         이후 비고와 비교 
         '''
-        text = self.extract_reference(ocr_result, reference)
-
-        print(f'hang ho: {text}')
         if remark is None:
             return model_response
-        if '이상인 경우' in remark:
-            if '%앞 숫자' in remark:
-                match = re.search(r'(\d+)%', str(model_response))
-                return match.group(1) if match else model_response
-        elif '이하인 경우' in remark:
-            if '%앞 숫자' in remark:
-                match = re.search(r'(\d+)%', str(model_response))
-                return match.group(1) if match else model_response
+        
+        match = re.search(r'이상인 경우\s*(\d+)', remark)
+        if match:
+            return int(match.group(1))
 
+        match = re.search(r'이하인 경우\s*(\d+)', remark)
+        if match:
+            return int(match.group(1))
+
+        if '이상인 경우' in remark:
+            match = re.search(r'(\d+)\s*%', text)
+            if match:
+                return int(match.group(1))
+
+        if '이하인 경우' in remark:
+            match = re.search(r'(\d+)\s*%', text)
+            if match:
+                return int(match.group(1))
 
     def apply_remark(self, model_response, ocr_result, user_requirement):
         '''
@@ -150,8 +160,11 @@ class PostProcessor:
         }
         컴플: 펀드그룹분류코드, 최고-최저비율, 한도산식, 신용등급
         '''
+        text = self.extract_reference(ocr_result, user_requirement['reference'])
+        print(f"hang ho: {text}, remark: {user_requirement['remark']}")
+
         if '최저비율' in user_requirement['requirement'] or '최고비율' in user_requirement['requirement']:
-            return self.adjust_limit_by_ref(model_response, ocr_result, user_requirement['reference'], user_requirement['remark'])
+            return self.adjust_limit_by_remark(model_response, text, user_requirement['remark'])
         elif user_requirement.keys() == '한도산식':
             pass
         elif user_requirement.keys() == '신용등급':

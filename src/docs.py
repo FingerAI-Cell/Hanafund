@@ -64,44 +64,42 @@ class MyFileHandler(FileHandler):
         match = re.search(pattern, text, re.DOTALL)
         return match.group(0).strip() if match else None
     
-    def extract_hang(self, ocr_text, hang_number):
-        if hang_number is None:
-            return ocr_text 
-        
-        text_list = [text.strip() for text in ocr_text.split('.')]
-        result = []
-        capture = False
-        pattern_start = re.compile(rf'^{hang_number}항')
-        for text in text_list:
-            if pattern_start.match(text):  # 해당 항 시작
-                result.append(text)
-                capture = True
-            elif re.match(r'^\d+항', text):  # 다음 항 시작 → 종료
-                if capture:
-                    break
-            elif capture:  # 항 내부 계속 수집
-                result.append(text)
-        return '. '.join(result) if result else None
+    def extract_hang(self, text, hang_number):
+        """
+        텍스트에서 특정 항(hang_number)에 해당하는 범위만 추출
+        예: 1항 → '1항 ... (2항 전까지)'
+        """
+        try:
+            hang_number = int(hang_number)
+        except (ValueError, TypeError):
+            return None  # or raise
+        flag = True  
+        start_pattern = re.compile(rf'(?:^|\n|\s){hang_number}\s*항')
+        end_pattern = re.compile(rf'(?:^|\n|\s){hang_number + 1}\s*항')
+        match_start = start_pattern.search(text)
+        if not match_start:
+            flag = False
+            return text, flag 
+        start = match_start.start()
+        match_end = end_pattern.search(text, pos=start)
+        end = match_end.start() if match_end else len(text)
+        return text[start:end].strip(), flag 
     
-    def extract_ho(self, ocr_text, ho_number):
-        if ho_number is None: 
-            return ocr_text 
-        
-        text_list = [text.strip() for text in ocr_text.split('.')] 
-        result = []
-        capture = False
-        pattern_start = re.compile(rf'^{ho_number}호')
+    def extract_ho(self, text, ho_number):
+        try:
+            ho_number = int(ho_number)
+        except (ValueError, TypeError):
+            return None
 
-        for text in text_list:
-            if pattern_start.match(text):
-                result.append(text)
-                capture = True
-            elif re.match(r'^\d+호', text):  # 다음 호가 시작되면 중단
-                if capture:
-                    break
-            elif capture:   # 1호 관련 설명이 여러 줄일 경우 계속 붙임
-                result.append(text)
-        return ''.join(result)
+        start_pattern = re.compile(rf'(?:^|\n|\s){ho_number}\s*호')
+        end_pattern = re.compile(rf'(?:^|\n|\s){ho_number + 1}\s*호')
+        start_match = start_pattern.search(text)
+        if not start_match:
+            return None
+        start = start_match.start()
+        end_match = end_pattern.search(text, pos=start)
+        end = end_match.start() if end_match else len(text)
+        return text[start:end].strip()
     
     def extract_row_info(self, data, idx):
         '''
