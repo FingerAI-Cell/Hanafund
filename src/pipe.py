@@ -55,23 +55,27 @@ class ExtractPipe:
             for key, requirement in user_requirements['Category'][category].items():
                 if key == '펀드그룹분류코드':
                     requirement['참조 Data'] = '제3조 2항 1호'
+                
                 ref = requirement['참조 Data'] 
+                if ref is not None: 
+                    ref = re.sub(r'^제(\d+)호', r'제\1조', ref)
+                
                 jo = self.myfile_handler.extract_jo_number(ref)
                 extracted_text = self.myfile_handler.extract_jo(ocr_result, jo)
     
                 answer = requirement['입력 Data'] 
                 requirement['입력 Data'] = None
                 print(f'key: {key}, req: {requirement}')
-                # print(f'jo: {jo}, ref: {ref}')
+                print(f'jo: {jo}, ref: {ref}')
                 # print(extracted_text, end='\n\n')
 
                 user_requirement = {
                     'requirement': key,
-                    'reference': requirement['참조 Data'], 
-                    'remark': requirement['비고']     
+                    'reference': ref.strip() if ref else None,
+                    'remark': requirement['비고'].strip() if requirement.get('비고') else None
                 }
-                llm_prompt = self.openai_llm.set_prompt_template(extracted_text, user_requirement)
+                llm_prompt = self.openai_llm.set_prompt_template(extracted_text, user_requirement, self.post_processor.reference_code)
                 # print(f'prompt: {llm_prompt}')
                 llm_response = self.openai_llm.get_response(llm_prompt, role=self.openai_llm.system_role, sub_role=self.openai_llm.sub_role)
-                # final_response = self.post_processor.apply_remark(llm_response, extracted_text, user_requirement)
-                print(f'model response: {llm_response}, answer: {answer}', end='\n\n')
+                final_response = self.post_processor.apply_remark(llm_response, extracted_text, user_requirement)
+                print(f'model response: {final_response}, answer: {answer}', end='\n\n')
