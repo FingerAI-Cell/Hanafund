@@ -92,7 +92,7 @@ class PostProcessor:
         self.reference_code = dict()
         self.reference_code['펀드그룹분류코드'] = ['투자신탁', '투자일임', '투자회사']
         self.reference_code['한도산식'] = {'미만': '<', '이하': '≤', '초과': '>', '이상': '≥', '사이': 'between'}
-        self.reference_code['단위구분'] = ['%', '원', '억', '백만', '만', '주', '계약', '만주', '개', '업종', '종목', '년', '월', '일', '분기', '신용등급']
+        self.reference_code['단위구분'] = ['%', '원', '억', '백만', '만', '주', '계약', '만주', '개', '업종', '종목', '년', '월', '일', '분기', '신용등급', '신용평가등급']
         self.reference_code['펀드구조'] = ['일반펀드', '모펀드', '자펀드', '클래스운용', '클래스', '클래스운용(자)']
         self.reference_code['펀드영업일기준'] = ['거래소 영업일', '판매사 영업일'] 
         self.reference_code['공모사모구분'] = ['공모/단독', '공모/일반', '사모/단독', '사모/일반']
@@ -106,23 +106,27 @@ class PostProcessor:
         ]
     
     def extract_reference(self, ocr_result, reference):
+        '''
+        주어진 텍스트에서, reference에 해당하는 항, 호를 추출해서 반환하는 함수
+        '''
+        if reference is None:
+            return ocr_result 
+
         hang, ho = self.myfile_handler.extract_hang_ho_number(reference)
-        print(f'hang: {hang}, ho: {ho}, text: {ocr_result}')
         if hang is not None and ho is not None:    # 항, 호 모두 존재하는 경우 '항 추출 -> 해당 항에서 호 추출' 
             hang_text, flag = self.myfile_handler.extract_hang(ocr_result, hang) 
-            print(f'hang text: {hang_text}')
+            # print(f'hang text: {hang_text}', end='\n\n')
             if flag == False: 
                 text = ocr_result 
             else: 
                 text = self.myfile_handler.extract_ho(hang_text, ho)
-            print(f'ho text: {text}')
         elif hang is not None and ho is None: 
             text = self.myfile_handler.extract_hang(ocr_result, hang) 
         elif hang is None and ho is not None: 
             text = self.myfile_handler.extract_ho(ocr_result, ho)
         else: 
-            text = ocr_result 
-        return text 
+            text = ocr_result
+        return text
 
     def adjust_limit_by_remark(self, model_response, text, remark):
         '''
@@ -149,7 +153,14 @@ class PostProcessor:
         if '이하인 경우' in remark:
             match = re.search(r'(\d+)\s*%', text)
             if match:
-                return int(match.group(1))
+                return int(match.group(1))    
+
+    def extract_limit_operator(self, text):
+        for keyword, symbol in self.reference_code['한도산식'].items():
+            if keyword in text:
+                return symbol
+        # 없으면 명시적 한도 조건 없음
+        return None  
 
     def apply_remark(self, model_response, ocr_result, user_requirement):
         '''
@@ -160,17 +171,18 @@ class PostProcessor:
         }
         컴플: 펀드그룹분류코드, 최고-최저비율, 한도산식, 신용등급
         '''
+        # print(f'original text: {ocr_result}', end='\n\n')
         text = self.extract_reference(ocr_result, user_requirement['reference'])
-        print(f"hang ho: {text}, remark: {user_requirement['remark']}")
+        if user_requirement['reference'] is not None:
+            print(f"extracted_text: {text}, reference: {user_requirement['reference']}, remark: {user_requirement['remark']}")
 
         if '최저비율' in user_requirement['requirement'] or '최고비율' in user_requirement['requirement']:
             return self.adjust_limit_by_remark(model_response, text, user_requirement['remark'])
-        elif user_requirement.keys() == '한도산식':
-            pass
-        elif user_requirement.keys() == '신용등급':
+        # elif user_requirement['requirement'] == '한도산식':
+        #    return self.extract_limit_operator(text)
+        elif user_requirement.keys() == '단위구분':
             pass 
         elif user_requirement.keys() in self.business_day_targets:
             pass 
-
-    def apply_remarks(self, text, remark):
-        pass 
+        else:
+            return model_response
