@@ -27,6 +27,7 @@ class LLMOpenAI(LLMModel):
         reference는 requirement 값에 대한 답이 나와있는 위치를 의미하고, remark는 값을 찾거나, 반환할 때 참고해야 할 내용이 적혀 있어. 
         reference가 None 인 경우에는 주어진 OCR 결과를 너가 살펴보고 requirement에 대한 적절한 값을 찾아 반환해줘.  
         이 둘을 참고해서 값을 반환해주는데, 값만 반환하지 말고 다른 말은 하지마. 특히, 텍스트 전체를 그대로 반환하는건 절대 안돼. 
+        그리고, 참고자료를 하나 더 전달해줄건데, 만약에 requirement가 참고자료에 있는 값이면, 참고자료에 나와있는 값들 형태로 반환해주면 돼.
         """
         self.sub_role = """
         * 좌당단가 = 1좌의 가격이 얼마인가 ?    e.g) 1좌를 3원으로 하여 ~  -> 좌당단가 = 3
@@ -52,12 +53,13 @@ class LLMOpenAI(LLMModel):
         반환값: 트러스톤매크로채권전략증권투자신탁[채권] 
         """
 
-    def set_prompt_template(self, ocr_result, user_requirements):
+    def set_prompt_template(self, ocr_result, user_requirements, reference_code):
         self.data_prompt_template = """
         OCR 결과: {ocr_result}
         사용자 요구사항: {user_requirements}
+        참고자료: {reference_code}
         """
-        return self.data_prompt_template.format(ocr_result=ocr_result, user_requirements=user_requirements)
+        return self.data_prompt_template.format(ocr_result=ocr_result, user_requirements=user_requirements, reference_code=reference_code)
                    
     def get_response(self, query, role="", sub_role="", model='gpt-4o'):
         try:
