@@ -24,7 +24,9 @@ def main(args):
     myfile_handler = MyFileHandler()
     user_requirements = myfile_handler.open_file(os.path.join(args.data_path, args.req_file), file_type='.json')
     extract_pipe = ExtractPipe()
-    extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements)
+    file_name = args.pdf_file.replace('.', '_').split('/')[-1].split('_')[0] + '_' + args.pdf_file.split('.')[-2] + '.json'
+    extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements, 
+                                    save_path='./dataset/output/model_response', file_name=file_name)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,9 @@ from .processors import FrontProcessor, PostProcessor
 from .docs import MyFileHandler
 from .models import LLMOpenAI
 from .ocr import UPOCR
+import json
 import re
+import os 
 
 class OCRPipe:
     '''
@@ -47,10 +49,11 @@ class ExtractPipe:
         self.openai_llm = LLMOpenAI()
         self.openai_llm.set_response_guideline()
     
-    def get_model_response(self, ocr_result, user_requirements):
+    def get_model_response(self, ocr_result, user_requirements, save_path=None, file_name=None):
         '''
         ocr 결과와, user_requirements를 입력으로 받아, 각 조, 항, 호에 해당하는 문서를 추출하고, 해당 영역에서 정답을 찾아 반환하는 함수 
         '''
+        all_records = []
         for category in user_requirements['Category']:
             for key, requirement in user_requirements['Category'][category].items():
                 if key == '펀드그룹분류코드':
@@ -65,6 +68,7 @@ class ExtractPipe:
     
                 answer = requirement['입력 Data'] 
                 requirement['입력 Data'] = None
+                requirement['비고'] = None 
                 print(f'key: {key}, req: {requirement}')
                 print(f'jo: {jo}, ref: {ref}')
                 # print(extracted_text, end='\n\n')
@@ -78,4 +82,17 @@ class ExtractPipe:
                 # print(f'prompt: {llm_prompt}')
                 llm_response = self.openai_llm.get_response(llm_prompt, role=self.openai_llm.system_role, sub_role=self.openai_llm.sub_role)
                 final_response = self.post_processor.apply_remark(llm_response, extracted_text, user_requirement)
+                if final_response.isdigit():
+                    final_response=float(final_response)
                 print(f'model response: {final_response}, answer: {answer}', end='\n\n')
+                record = {
+                    'key': key,
+                    'requirement': requirement,
+                    'extracted_text': extracted_text if requirement['참조 Data'] is not None else "참조 Data가 Null 이기 때문에, 전체 텍스트를 참조합니다.",
+                    'model_response': final_response,
+                    'answer': answer
+                }
+                all_records.append(record)
+        if save_path != None: 
+            with open(os.path.join(save_path, file_name), 'w', encoding='utf-8') as f:
+                json.dump(all_records, f, ensure_ascii=False, indent=2)
