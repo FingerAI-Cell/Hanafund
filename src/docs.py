@@ -66,25 +66,27 @@ class MyFileHandler(FileHandler):
     
     def extract_hang(self, text, hang_number):
         """
-        텍스트에서 특정 항(hang_number)에 해당하는 범위만 추출
-        예: 1항 → '1항 ... (2항 전까지)' 
-        항은 앞에 '제'가 붙어있는 경우 다른 항 및 호에서 인용하는 문구일 확률이 높음
+        'n항'의 본문을 추출하되, '제n항'은 참조로 간주하여 end pattern에서 제외
         """
         try:
             hang_number = int(hang_number)
         except (ValueError, TypeError):
-            return None  # or raise
-        flag = True  
-        start_pattern = re.compile(rf'(?:^|\n|\s){hang_number}\s*항')
-        end_pattern = re.compile(rf'(?:^|\n|\s){hang_number + 1}\s*항')
+            return None, False
+
+        flag = True
+        # 오직 'n항' (제 제외)만 시작점/끝점으로 잡음
+        start_pattern = re.compile(rf'(?<!제)(?:^|\n|\s){hang_number}\s*항')
+        end_pattern = re.compile(rf'(?<!제)(?:^|\n|\s){hang_number + 1}\s*항')
+
         match_start = start_pattern.search(text)
         if not match_start:
             flag = False
-            return text, flag 
+            return text, flag
+
         start = match_start.start()
         match_end = end_pattern.search(text, pos=start)
         end = match_end.start() if match_end else len(text)
-        return text[start:end].strip(), flag 
+        return text[start:end].strip(), flag
     
     def extract_ho(self, text, ho_number):
         try:
@@ -92,11 +94,14 @@ class MyFileHandler(FileHandler):
         except (ValueError, TypeError):
             return None
 
-        start_pattern = re.compile(rf'(?:^|\n|\s){ho_number}\s*호')
-        end_pattern = re.compile(rf'(?:^|\n|\s){ho_number + 1}\s*호')
+        # '제'가 앞에 붙은 참조 표현은 제외하고 본문만 매칭
+        start_pattern = re.compile(rf'(?<!제)(?:^|\n|\s){ho_number}\s*호')
+        end_pattern = re.compile(rf'(?<!제)(?:^|\n|\s){ho_number + 1}\s*호')
+
         start_match = start_pattern.search(text)
         if not start_match:
             return None
+
         start = start_match.start()
         end_match = end_pattern.search(text, pos=start)
         end = end_match.start() if end_match else len(text)
