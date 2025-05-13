@@ -48,6 +48,11 @@ class ExtractPipe:
         self.post_processor = PostProcessor()
         self.openai_llm = LLMOpenAI()
         self.openai_llm.set_response_guideline()
+
+    def extract_requirements(self, excel_file, sheet_name, row_idx):
+        requirement_df = self.myfile_handler.open_file(excel_file, file_type='.xlsx', sheet_name=sheet_name, header=[0, 1, 2])
+        user_requirement = self.myfile_handler.extract_row_info(requirement_df, row_idx)
+        return user_requirement
     
     def get_model_response(self, ocr_result, user_requirements, save_path=None, file_name=None):
         '''
@@ -61,38 +66,40 @@ class ExtractPipe:
                 
                 ref = requirement['참조 Data'] 
                 if ref is not None: 
-                    ref = re.sub(r'^제(\d+)호', r'제\1조', ref)
+                    ref = re.sub(r'^제(\d+)호', r'제\1조', ref).strip()
                 
                 jo = self.myfile_handler.extract_jo_number(ref)
-                extracted_text = self.myfile_handler.extract_jo(ocr_result, jo)
-    
+                extracted_jo_text = self.myfile_handler.extract_jo(ocr_result, jo)
+                extracted_text = self.post_processor.extract_reference(extracted_jo_text, ref)
                 answer = requirement['입력 Data'] 
                 requirement['입력 Data'] = None
+                origin_requirement = requirement.copy()
                 requirement['비고'] = None 
                 print(f'key: {key}, req: {requirement}')
                 print(f'jo: {jo}, ref: {ref}')
-                # print(extracted_text, end='\n\n')
+                print(extracted_text, end='\n\n')
 
                 user_requirement = {
                     'requirement': key,
-                    'reference': ref.strip() if ref else None,
+                    'reference': ref,
                     'remark': requirement['비고'].strip() if requirement.get('비고') else None
                 }
                 llm_prompt = self.openai_llm.set_prompt_template(extracted_text, user_requirement, self.post_processor.reference_code)
                 # print(f'prompt: {llm_prompt}')
                 llm_response = self.openai_llm.get_response(llm_prompt, role=self.openai_llm.system_role, sub_role=self.openai_llm.sub_role)
-                final_response = self.post_processor.apply_remark(llm_response, extracted_text, user_requirement)
-                if final_response.isdigit():
-                    final_response=float(final_response)
-                print(f'model response: {final_response}, answer: {answer}', end='\n\n')
+                # final_response = self.post_processor.apply_remark(llm_response, extracted_text, user_requirement)
+                if llm_response.isdigit():
+                    llm_response=float(llm_response)
+                print(f'model response: {llm_response}, answer: {answer}', end='\n\n')
                 record = {
                     'key': key,
-                    'requirement': requirement,
+                    'requirement': origin_requirement, 
+                    'model_input': requirement,
                     'extracted_text': extracted_text if requirement['참조 Data'] is not None else "참조 Data가 Null 이기 때문에, 전체 텍스트를 참조합니다.",
-                    'model_response': final_response,
+                    'model_response': llm_response,
                     'answer': answer
                 }
                 all_records.append(record)
         if save_path != None: 
             with open(os.path.join(save_path, file_name), 'w', encoding='utf-8') as f:
-                json.dump(all_records, f, ensure_ascii=False, indent=2)
+                json.dump(all_records, f, ensure_ascii=False, indent=2, default=str)
