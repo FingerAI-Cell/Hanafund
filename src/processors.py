@@ -121,7 +121,11 @@ class PostProcessor:
             else: 
                 text = self.myfile_handler.extract_ho(hang_text, ho)
         elif hang is not None and ho is None: 
-            text = self.myfile_handler.extract_hang(ocr_result, hang) 
+            hang_text, flag = self.myfile_handler.extract_hang(ocr_result, hang)
+            if flag == False: 
+                text = ocr_result 
+            else:
+                text = hang_text  
         elif hang is None and ho is not None: 
             text = self.myfile_handler.extract_ho(ocr_result, ho)
         else: 
