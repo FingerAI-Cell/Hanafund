@@ -18,13 +18,13 @@ def main(args):
     ocr_pipe = OCRPipe(upstage_api_key)
     # ocr_result = ocr_pipe.get_ocr(args.pdf_file)
     # processed_ocr = ocr_pipe.process_ocr(ocr_result, './dataset/output/', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
-    processed_ocr = ocr_pipe.load_ocr('./dataset/output', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
+    processed_ocr = ocr_pipe.load_ocr('./dataset/ocr', args.pdf_file.split('/')[-1].split('.')[0] + '.txt')
     # print(processed_ocr)
     
     # myfile_handler = MyFileHandler()
     # user_requirements = myfile_handler.open_file(os.path.join(args.data_path, args.req_file), file_type='.json')
     extract_pipe = ExtractPipe()
-    excel_file_path = './dataset/excel/하나펀드서비스_신탁계약서.xlsx'
+    excel_file_path = './dataset/requirements/하나펀드서비스_신탁계약서.xlsx'
     user_requirements = extract_pipe.extract_requirements(excel_file_path, args.sheet_name, args.row_idx)
     file_name = args.pdf_file.replace('.', '_').split('/')[-1].split('_')[0] + '_' + args.pdf_file.split('.')[-2] + '.json'
     extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements, 

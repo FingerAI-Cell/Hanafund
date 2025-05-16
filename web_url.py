@@ -40,7 +40,7 @@ def get_ocr():
         data = request.json
         pdf_file = data['pdf_file_name']
         
-        ocr_result = ocr_pipe.get_ocr(os.path.join(file_path, 'ocr', pdf_file))
+        ocr_result = ocr_pipe.get_ocr(os.path.join(file_path, pdf_file))
         processed_ocr = ocr_pipe.process_ocr(ocr_result)
         return jsonify({"status": "ocr completed"}), 200 
     except Exception as e: 
@@ -57,7 +57,7 @@ def get_requirement():
         file_name = data['file_name']
         excel_sheet = data['sheet_name'] 
         row_idx = data['row_idx'] 
-        user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'excel', file_name), excel_sheet, row_idx)
+        user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'requirements', file_name), excel_sheet, row_idx)
         return jsonify({"status": "requirement extracted", "requirement": user_requirements}), 200 
     except Exception as e: 
         return jsonify({"error": str(e)}), 404 
@@ -73,10 +73,10 @@ def run_process():
 
         # ocr_result = ocr_pipe.get_ocr(os.path.join(file_path, 'ocr', file_name))
         # processed_ocr = ocr_pipe.process_ocr(ocr_result)
-        print(f'ocr load: {os.path.join(file_path, 'output', file_name.split('/')[-1].split('.')[0] + '.txt')}')
-        processed_ocr = ocr_pipe.load_ocr(os.path.join(file_path, 'output'), file_name.split('/')[-1].split('.')[0] + '.txt')
+        print(f'ocr load: {os.path.join(file_path, 'ocr', file_name.split('/')[-1].split('.')[0] + '.txt')}')
+        processed_ocr = ocr_pipe.load_ocr(os.path.join(file_path, 'ocr'), file_name.split('/')[-1].split('.')[0] + '.txt')
         
-        user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'excel', excel_file_name), excel_sheet, row_idx)
+        user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'requirements', excel_file_name), excel_sheet, row_idx)
         model_response = extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements)
         return jsonify({"status": "process succeed", "model_response": model_response}), 200 
     except Exception as e: 
