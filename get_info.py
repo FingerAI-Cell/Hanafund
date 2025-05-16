@@ -12,7 +12,6 @@ def main(args):
 
     accounting_df = myfile_handler.open_file(excel_file, file_type='.xlsx', sheet_name=args.sheet_name, header=[0, 1, 2])
     # file_num = len(accounting_df['약관 Sample']['구분'].dropna())
-    file_requests = dict()
     row_idx = 2
     row_info = myfile_handler.extract_row_info(accounting_df, row_idx)
     print(row_info)

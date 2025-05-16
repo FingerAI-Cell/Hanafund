@@ -103,3 +103,5 @@ class ExtractPipe:
         if save_path != None: 
             with open(os.path.join(save_path, file_name), 'w', encoding='utf-8') as f:
                 json.dump(all_records, f, ensure_ascii=False, indent=2, default=str)
+            return 
+        return all_records
