@@ -29,6 +29,16 @@ ocr_pipe = OCRPipe(upstage_api_key)
 extract_pipe = ExtractPipe()
 file_path = './dataset'
 
+@app.route('/download', methods=['POST'])
+def get_file():
+    try:
+        data = request.json 
+        file_type = data['file_type']   # requirement, model response
+
+        pass
+    except Exception as e: 
+        return jsonify({"error": str(e)}), 400 
+
 
 @app.route('/ocr', methods=['POST'])
 def get_ocr():
@@ -39,7 +49,6 @@ def get_ocr():
     try:
         data = request.json
         pdf_file = data['pdf_file_name']
-        
         ocr_result = ocr_pipe.get_ocr(os.path.join(file_path, pdf_file))
         processed_ocr = ocr_pipe.process_ocr(ocr_result)
         return jsonify({"status": "ocr completed"}), 200 
@@ -49,16 +58,19 @@ def get_ocr():
 @app.route('/requirement', methods=['POST'])
 def get_requirement():
     '''
-    input: file_name, sheet name, row idx 
+    input: file_name, sheet name, row idx    # 회계 컴플 
     output: user requirement 
     '''
     try:
         data = request.json
         file_name = data['file_name']
         excel_sheet = data['sheet_name'] 
-        row_idx = data['row_idx'] 
-        user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'requirements', file_name), excel_sheet, row_idx)
-        return jsonify({"status": "requirement extracted"}), 200 
+        row_idx = data['row_idx']
+        save_file_name = f'req_{excel_sheet}_{str(row_idx).zfill(2)}.json' 
+        user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'requirements', file_name), excel_sheet, row_idx, \
+                                                            save_path=os.path.join(file_path, 'requirements'), file_name=save_file_name)
+        file_status = 'requirement'
+        return jsonify({"status": "requirement extracted", "user_req": user_requirements}), 200 
     except Exception as e: 
         return jsonify({"error": str(e)}), 400 
 
@@ -70,14 +82,14 @@ def get_model_response():
     '''
     try: 
         data = request.json  # JSON 본문을 받음
-        print(data)
-        ocr_file = data['ocr_result']
-        req_file = data['user_requirement']
-        print(os.path.join(file_path, 'ocr'))
+        ocr_file = data['ocr_result']   # 00.txt 
+        req_file = data['user_requirement']   # req_회계_00.json 
         processed_ocr = ocr_pipe.load_ocr(os.path.join(file_path, 'ocr'), ocr_file)
         # print(processed_ocr)
+        save_file_name = req_file.replace('req', 'model_response')
         user_requirements = extract_pipe.load_requirements(os.path.join(file_path, 'requirements'), req_file)
-        model_response = extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements)
+        model_response = extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements, 
+                                                        save_path=os.path.join(file_path, 'model_response'), file_name=save_file_name)
         return jsonify({"status": "model response received"}), 200 
     except Exception as e:
         return jsonify({"error": str(e)}), 400 

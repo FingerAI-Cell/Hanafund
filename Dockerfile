@@ -4,7 +4,6 @@
 # --- Builder stage ---
 FROM python:3.12-slim-bullseye AS builder
 WORKDIR /app
-ARG GITHUB_TOKEN
 
 # 필수 도구만 설치
 RUN apt-get update && apt-get install -y --no-install-recommends python3-venv build-essential git locales && \
