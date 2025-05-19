@@ -25,7 +25,9 @@ def main(args):
     # user_requirements = myfile_handler.open_file(os.path.join(args.data_path, args.req_file), file_type='.json')
     extract_pipe = ExtractPipe()
     excel_file_path = './dataset/requirements/하나펀드서비스_신탁계약서.xlsx'
-    user_requirements = extract_pipe.extract_requirements(excel_file_path, args.sheet_name, args.row_idx)
+    save_path = './dataset/requirements'
+    req_file_name = 'test.json'
+    user_requirements = extract_pipe.extract_requirements(excel_file_path, args.sheet_name, args.row_idx, save_path, req_file_name)
     file_name = args.pdf_file.replace('.', '_').split('/')[-1].split('_')[0] + '_' + args.pdf_file.split('.')[-2] + '.json'
     extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements, 
                                     save_path='./dataset/output/model_response', file_name=file_name)

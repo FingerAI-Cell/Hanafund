@@ -49,9 +49,17 @@ class ExtractPipe:
         self.openai_llm = LLMOpenAI()
         self.openai_llm.set_response_guideline()
 
-    def extract_requirements(self, excel_file, sheet_name, row_idx):
+    def extract_requirements(self, excel_file, sheet_name, row_idx, save_path=None, file_name=None):
         requirement_df = self.myfile_handler.open_file(excel_file, file_type='.xlsx', sheet_name=sheet_name, header=[0, 1, 2])
         user_requirement = self.myfile_handler.extract_row_info(requirement_df, row_idx)
+        if save_path != None: 
+            with open(os.path.join(save_path, file_name), "w", encoding="utf-8") as f:
+                json.dump(user_requirement, f, ensure_ascii=False, indent=2, default=str)
+        return user_requirement
+
+    def load_requirements(self, save_path, file_name):        
+        with open(os.path.join(save_path, file_name), "r", encoding="utf-8") as f:
+            user_requirement = json.load(f) 
         return user_requirement
     
     def get_model_response(self, ocr_result, user_requirements, save_path=None, file_name=None):
