@@ -4,7 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-
+    networks:
+      - your_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 networks:
   your_network:
     external: true

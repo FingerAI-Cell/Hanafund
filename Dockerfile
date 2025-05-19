@@ -2,7 +2,7 @@
 # write by Jaedong, Oh (2025.05.13)
 # Builder Image define 
 # --- Builder stage ---
-FROM python:3.12-slim-bullseye as builder
+FROM python:3.12-slim-bullseye AS builder
 WORKDIR /app
 ARG GITHUB_TOKEN
 
