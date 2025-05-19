@@ -3,7 +3,7 @@ set -e
 
 IMAGE_NAME="hanafund_ocr:poc"
 CONTAINER_NAME="hanafund_ocr_poc"
-NETWORK_NAME="olaf-poc-service"    
+NETWORK_NAME="YOUR Network name"    
 HOST_DIR="$(pwd)"
 CONTAINER_DIR="/hanafund_ocr"
 
