@@ -8,3 +8,4 @@ src/__pycache__
 *.pdf
 *.json
 /dataset/ocr
+get_response.py
