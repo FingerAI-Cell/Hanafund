@@ -19,7 +19,7 @@ RUN pip install --upgrade pip && \
 # --- Inference image ---
 FROM python:3.12-slim-bullseye
 ENV PATH="/opt/venv/bin:$PATH"
-WORKDIR /hanafund
+WORKDIR /hanafund_ocr
 
 COPY --from=builder /opt/venv /opt/venv
 COPY . .
