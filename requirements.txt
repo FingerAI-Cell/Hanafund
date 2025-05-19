@@ -1,0 +1,12 @@
+huggingface-hub
+openai
+pandas 
+tqdm
+load_dotenv
+numpy<2
+seaborn
+PyMuPDF
+ultralytics>=8.2.85
+unimernet==0.2.1
+openpyxl
+flask
