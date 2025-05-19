@@ -102,7 +102,7 @@ class ExtractPipe:
                 record = {
                     'key': key,
                     'requirement': origin_requirement, 
-                    'model_input': requirement,
+                    # 'model_input': requirement,
                     'extracted_text': extracted_text if requirement['참조 Data'] is not None else "참조 Data가 Null 이기 때문에, 전체 텍스트를 참조합니다.",
                     'model_response': llm_response,
                     'answer': answer
