@@ -62,7 +62,7 @@ def get_requirement():
     except Exception as e: 
         return jsonify({"error": str(e)}), 400 
 
-@app.route('/model_reponse', methods=['POST'])
+@app.route('/model_response', methods=['POST'])
 def get_model_response():
     '''
     input: ocr result (.json), user requirement (.json)
