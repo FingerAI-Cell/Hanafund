@@ -29,16 +29,23 @@ ocr_pipe = OCRPipe(upstage_api_key)
 extract_pipe = ExtractPipe()
 file_path = './dataset'
 
+'''
 @app.route('/download', methods=['POST'])
 def get_file():
     try:
         data = request.json 
         file_type = data['file_type']   # requirement, model response
-
-        pass
+        sheet_name = data['sheet_name'] 
+        row_idx = data['row_idx'] 
+        if file_type == 'requirement':
+            pass
+        elif file_type == 'model_response':
+            pass
+        else:
+            print(f'유효한 파일 타입을 입력해주세요(requirement, model_reponse).')
     except Exception as e: 
         return jsonify({"error": str(e)}), 400 
-
+'''
 
 @app.route('/ocr', methods=['POST'])
 def get_ocr():
@@ -69,10 +76,21 @@ def get_requirement():
         save_file_name = f'req_{excel_sheet}_{str(row_idx).zfill(2)}.json' 
         user_requirements = extract_pipe.extract_requirements(os.path.join(file_path, 'requirements', file_name), excel_sheet, row_idx, \
                                                             save_path=os.path.join(file_path, 'requirements'), file_name=save_file_name)
-        file_status = 'requirement'
-        return jsonify({"status": "requirement extracted", "user_req": user_requirements}), 200 
+        response_data = {
+            "status": "requirement extracted",
+            "user_req": user_requirements
+        }
+        return Response(
+            json.dumps(response_data, ensure_ascii=False, indent=2, default=str),
+            status=200,
+            content_type="application/json"
+        )
     except Exception as e: 
-        return jsonify({"error": str(e)}), 400 
+        return Response(
+            json.dumps({"error": str(e)}, ensure_ascii=False),
+            status=400,
+            content_type="application/json"
+        )
 
 @app.route('/model_response', methods=['POST'])
 def get_model_response():
@@ -90,9 +108,21 @@ def get_model_response():
         user_requirements = extract_pipe.load_requirements(os.path.join(file_path, 'requirements'), req_file)
         model_response = extract_pipe.get_model_response(ocr_result=processed_ocr, user_requirements=user_requirements, 
                                                         save_path=os.path.join(file_path, 'model_response'), file_name=save_file_name)
-        return jsonify({"status": "model response received"}), 200 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400 
+        response_data = {
+            "status": "model response received",
+            "user_req": model_response
+        }
+        return Response(
+            json.dumps(response_data, ensure_ascii=False, indent=2, default=str),
+            status=200,
+            content_type="application/json"
+        )
+    except Exception as e: 
+        return Response(
+            json.dumps({"error": str(e)}, ensure_ascii=False),
+            status=400,
+            content_type="application/json"
+        )
 
 @app.route('/run', methods=['POST'])
 def run_process():
