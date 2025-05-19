@@ -1,0 +1,10 @@
+services:
+  app:
+    image: hanafund_ocr_final
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+networks:
+  your_network:
+    external: true
