@@ -144,6 +144,10 @@ def run_process():
     except Exception as e: 
         return jsonify({"error": str(e)}), 404 
 
+def test():
+    data = request.data['test']
+    print(data)
+    return jsonify({"status": "test succeed", "data": data}), 200 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8081, debug=True)

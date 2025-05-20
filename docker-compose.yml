@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: hanafund-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./web:/var/www/html
+    ports:
+      - "80:80"
+    networks:
+      - hanafund-network
+    depends_on:
+      - hanafund-app
+    command: bash -c "chmod -R 755 /var/www/html && nginx -g 'daemon off;'"
+
+  hanafund-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hanafund-app
+    restart: unless-stopped
+    volumes:
+      - ./web:/hanafund/web
+      - ./src:/hanafund/src
+      - ./config:/hanafund/config
+      - ./docker/php/www.conf:/etc/php/8.1/fpm/pool.d/www.conf
+      - ./docker/php/php.ini:/etc/php/8.1/fpm/php.ini
+      - php_logs:/var/log/php-fpm
+      - python_data:/hanafund/data
+      - logs:/hanafund/logs
+    ports:
+      - "9000:9000"
+    networks:
+      - hanafund-network
+    environment:
+      - PHP_WEB_PATH=/hanafund/web
+
+networks:
+  hanafund-network:
+    driver: bridge
+
+volumes:
+  php_logs:
+    driver: local
+  python_data:
+    driver: local
+  logs:
+    driver: local 
